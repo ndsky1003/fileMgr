@@ -17,35 +17,62 @@ import (
 )
 
 var (
-	Name    string
+	Names   string
 	Urls    string
 	Secrets string
 	Root    string
 )
 
+var (
+	names   []string
+	urls    []string
+	secrets []string
+	name0   string
+	secret0 string
+)
+
 // var AdminClient *crpc.Client
 
 func main() {
-	flag.StringVar(&Name, "name", "filemgr", "server name, regist in crpc")
+	flag.StringVar(&Names, "names", "filemgr", "server name, regist in crpc,和地址一一对应,如果只有一个的话,就是通配全部")
 	flag.StringVar(&Urls, "urls", "127.0.0.1:18083", "crpc address,eg:127.0.0.1:18083,localhost:18083")
-	flag.StringVar(&Urls, "secrets", "", "和地址一一对应的密钥eg:")
+	flag.StringVar(&Secrets, "secrets", "", "和地址一一对应的密钥eg:")
 	flag.StringVar(&Root, "root", ".", "root dir")
 	flag.Parse()
-	urls := strings.Split(Urls, ",")
-	secrets := strings.Split(Secrets, ",")
-	if len(urls) != len(secrets) {
-		panic(fmt.Sprintf("len(urls) != len(secrets),len(urls):%v,len(secrets):%v", len(urls), len(secrets)))
+	names = strings.Split(Names, ",")
+	urls = strings.Split(Urls, ",")
+	secrets = strings.Split(Secrets, ",")
+	if len(names) == 0 {
+		panic("names is empty")
 	}
+	if len(urls) == 0 {
+		panic("urls is empty")
+	}
+	name0 = names[0]
+	secret0 = secrets[0]
+
 	for i, url := range urls {
-		fmt.Println("listen:", url, Name)
-		tmpclient := crpc.Dial(Name, url, options.Client().SetSecret(secrets[i]))
+		name, secret := getNameAndSecret(i)
+		fmt.Printf("listen:%v,name:%v", url, name)
+		tmpclient := crpc.Dial(name, url, options.Client().SetSecret(secret))
 		tmpclient.RegisterName("crpc", &msg{})
 	}
 	select {}
-	// m := &msg{}
-	// var res []*FileInfo
-	// err := m.ListDir(struct{ Path string }{Path: ""}, &res)
-	// fmt.Println(res, err)
+}
+
+func getNameAndSecret(i int) (name string, secret string) {
+	if i >= len(names) {
+		name = name0
+	} else {
+		name = names[i]
+	}
+
+	if i >= len(secrets) {
+		secret = secret0
+	} else {
+		secret = secrets[i]
+	}
+	return
 }
 
 type msg struct {
